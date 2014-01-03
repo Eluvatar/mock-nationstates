@@ -1,0 +1,42 @@
+{
+  "nation" : {
+    "name" : "NAME",
+    "fullname" : "FULLNAME",
+    "type" : "TYPE",
+    "motto" : "MOTTO",
+    "category" : "CATEGORY",
+    "wa" : "UNSTATUS",
+    "freedom" : "FREEDOM",
+    "region" : "REGION",
+    "population" : "POPULATION",
+    "tax" : "TAX",
+    "animal" : "brush-tailed rabbit",
+    "currency" : "CURRENCY",
+    "flag" : "FLAG",
+    "majorindustry" : "MAJORINDUSTRY",
+    "govtpriority" : "GOVTPRIORITY",
+    "govt" : "GOVT",
+    "founded" : "FOUNDED",
+    "firstlogin" : "FIRSTLOGIN",
+    "lastlogin" : "LASTLOGIN",
+    "lastactivity" : "LASTACTIVITY",
+    "influence" : "INFLUENCE",
+    "freedomscores" : "FREEDOMSCORES",
+    "publicsector" : "PUBLICSECTOR",
+    "leader" : "LEADER",
+    "capital" : "CAPITAL",
+    "religion" : "RELIGION"
+  },
+  "region" : {
+    "name" : "NAME",
+    "factbook" : "FACTBOOK",
+    "numnations" : "NUMNATIONS",
+    "nations" : "NATIONS",
+    "delegate" : "DELEGATE",
+    "delegatevotes" : "DELEGATEVOTES",
+    "founder" : "FOUNDER",
+    "power" : "POWER",
+    "flag" : "FLAG",
+    "embassies" : "EMBASSIES"
+  }
+}

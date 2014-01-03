@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<REGIONS api_version="4">
+<REGION>
+<NAME>World Federation of Democratic Youth</NAME>
+<FACTBOOK><![CDATA[[url=http://www.wfdy.org/]WFDY[/url]]]></FACTBOOK>
+<NUMNATIONS>1</NUMNATIONS>
+<NATIONS>independent_statism</NATIONS>
+<DELEGATE>0</DELEGATE>
+<DELEGATEVOTES>0</DELEGATEVOTES>
+<FOUNDER>independent_statism</FOUNDER>
+<POWER>Low</POWER>
+<FLAG>http://www.nationstates.net/images/flags/uploads/rflags/world_federation_of_democratic_youth__893147.png</FLAG>
+<EMBASSIES>
+<EMBASSY>Rebel Youth</EMBASSY>
+<EMBASSY>The Communist Party of NationStates</EMBASSY>
+</EMBASSIES>
+</REGION>
+</REGIONS>
