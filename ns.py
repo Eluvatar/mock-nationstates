@@ -13,7 +13,6 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import json, mmap, cherrypy
 import string,codecs
 
 __id_str__trans=string.maketrans(" ","_")
