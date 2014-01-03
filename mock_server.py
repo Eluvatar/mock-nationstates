@@ -17,7 +17,14 @@
 
 import json, mmap, cherrypy
 import xml.etree.ElementTree as ET
+import time, sys
+from collections import deque
 from ns import id_str
+
+if "--ratelimit" in sys.argv:
+    ratelimit = True
+else:
+    ratelimit = False
 
 shards = json.load(open('data/shards.json','r'))
 
@@ -75,10 +82,39 @@ def api_result(key,val,idx,mm,q):
 <p><a href="/pages/api.html">The NationStates API Documentation</a>
 """.format(key,val)
 
+def ratelimit(inner):
+    if ratelimit:
+        last = deque()
+        violation = [0.0]
+        def __outer(*args, **kwargs):
+            ts = time.time()
+            last.append(ts)
+            if( len(last) > 50 ):
+                rel = last.popleft()
+                if( violation[0] + (15*60.0) > ts or rel >= ts - 30.0 ):
+                    if( rel >= ts - 30.0 ):
+                        violation[0] = ts
+                        cherrypy.request.app.log.error( \
+                          "ratelimit violation at {0}".format(ts))
+                    cherrypy.response.status = 429
+                    # TODO get actual error html
+                    return """
+<!DOCTYPE html>
+<h1 style="color:red">Too Many Requests From Your IP Address.</h1>
+<p style="font-size:small">Error: 429 banned until {0}
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+""".format( time.asctime(time.gmtime(violation[0]+(15*60.0))) )
+            return inner(*args, **kwargs)
+    else:
+        def __outer(*args, **kwargs):
+            return inner(*args, **kwargs)
+    return __outer
+
 class MockNationStatesApi(object):
     exposed = True
     
     @cherrypy.expose
+    @ratelimit
     def default(self, *args, **params):
         for pair in args:
             key, val = pair.split("=",1)
