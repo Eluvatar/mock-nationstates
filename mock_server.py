@@ -17,6 +17,7 @@
 
 import json, mmap, cherrypy
 import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import ParseError as PE
 import time, sys
 from collections import deque
 from ns import id_str
@@ -36,6 +37,7 @@ def memmap(fname):
 
 nm = memmap('data/nations.xml')
 rm = memmap('data/regions.xml')
+em = memmap('data/happenings.xml')
 
 def scan(mm,beg,end,idx):
     done = False
@@ -57,6 +59,64 @@ scan(nm, "<NATION>", "</NATIONS>", nations)
 regions = dict()
 scan(rm, "<REGION>", "</REGIONS>", regions)
 
+def event_scan(mm,idx):
+    beg = "<EVENT"
+    end = "</EVENT>"
+    done = False
+    i = mm.find(beg)
+    while not done:
+        j = mm.find(beg, i+len(beg))
+        if( j == -1 ):
+            done = True
+        eidi = i+len('<EVENT id="')
+        eidj = mm.find('"',eidi)
+        eid = int(mm[eidi:eidj])
+        idx[eid] = (i,mm.find(end,i+len(beg))+len(end))
+        i=j
+
+events = dict()
+event_scan(em, events)
+
+def event_time_adjust(mm,idx,ts):
+    eid = min(idx.keys())
+    i,j = idx[eid]
+    try:
+        exml = ET.fromstring(mm[i:j])
+    except PE:
+        print mm[i:j]
+        raise
+    ets = int(exml.find('TIMESTAMP').text)
+    return int(ts-ets)
+
+event_time_shift = event_time_adjust(em,events,time.time())
+
+def find_first_event(mm,idx,ts):
+    i = min(idx.keys())
+    j = max(idx.keys())
+    ii,ij = idx[i]
+    ji,jj = idx[j]
+    ei,ej = ET.fromstring(mm[ii:ij]), ET.fromstring(mm[ji:jj])
+    def _find_first_event(mm,idx,ts,i,ei,j,ej):
+        if( i == j ):
+            return i
+        k = int((i+j)/2)
+        while k not in idx:
+            k += 1
+        if( k == j ):
+            k = int((i+j)/2)
+            while k not in idx:
+                k -= 1
+        if( i == k ):
+            return j
+        ki,kj = idx[k]
+        ek = ET.fromstring(mm[ki:kj])
+        tk = int(ek.find("TIMESTAMP").text)
+        if( tk >= ts ):
+            return _find_first_event(mm,idx,ts,i,ei,k,ek)
+        else:
+            return _find_first_event(mm,idx,ts,k,ek,j,ej)
+    return _find_first_event(mm,idx,ts,i,ei,j,ej)
+    
 PORT = 6260
 
 def api_result(key,val,idx,mm,q):
@@ -81,6 +141,42 @@ def api_result(key,val,idx,mm,q):
 <p style="font-size:small">Error: 404 Not Found
 <p><a href="/pages/api.html">The NationStates API Documentation</a>
 """.format(key,val)
+
+
+def world_api_result(nm,nations,rm,regions,em,events,q,params):
+    cherrypy.response.headers['Content-Type']='application/xml'
+    root = ET.Element("WORLD")
+    if "happenings" in q:
+        if "limit" in params:
+            limit = int(params["limit"])
+        else:
+            limit = 100
+        if "sinceid" in params:
+            sinceid = int(params["sinceid"])
+        else:
+            sinceid = None
+        if "beforeid" in params:
+            beforeid = int(params["beforeid"])
+        else:
+            beforeid = None
+        if not (beforeid or sinceid):
+            ts = time.time()
+            sinceid = find_first_event(em,events,ts-event_time_shift)
+        if not sinceid:
+            sinceid = beforeid - limit
+        if not beforeid:
+            beforeid = sinceid + limit
+        hroot = ET.Element("HAPPENINGS")
+        root.append(hroot)
+        for eid in xrange(sinceid,beforeid):
+            if eid in events:
+                i,j = events[eid]
+                e = ET.fromstring(em[i:j])
+                etsx = e.find("TIMESTAMP")
+                ets = int(etsx.text)
+                etsx.text = str(ets+event_time_shift)
+                hroot.append(e)
+    return ET.tostring(root)
 
 def ratelimit(inner):
     if ratelimit:
@@ -129,6 +225,8 @@ class MockNationStatesApi(object):
             return api_result('nation',params['nation'],nations,nm,q)
         elif 'region' in params:
             return api_result('region',params['region'],regions,rm,q)
+        elif q:
+            return world_api_result(nm,nations,rm,regions,em,events,q,params)
         else:
             cherrypy.response.status = 400         
             return """
