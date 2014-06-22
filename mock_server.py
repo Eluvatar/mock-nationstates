@@ -120,7 +120,7 @@ class MockNationStatesApi(object):
             key, val = pair.split("=",1)
             params[key] = val
         if 'q' in params:
-            q = params['q'].split('+')
+            q = params['q'].replace('+',' ').split()
         else:
             q = None
         if 'nation' in params:
