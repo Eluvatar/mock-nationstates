@@ -97,13 +97,15 @@ def ratelimit(inner):
                         cherrypy.request.app.log.error( \
                           "ratelimit violation at {0}".format(ts))
                     cherrypy.response.status = 429
-                    # TODO get actual error html
+                    ip = cherrypy.request.remote.ip
+                    minutes = int((violation[0]+(15*60.0) - ts)/60)
                     return """
 <!DOCTYPE html>
 <h1 style="color:red">Too Many Requests From Your IP Address.</h1>
-<p style="font-size:small">Error: 429 banned until {0}
+<p>Your IP address {0} has sent more than 50 requests in 30 seconds. Access to the API has been blocked for the next {1} minutes. Please do not send bursts of traffic!</p><p>Requests should be spaced out to avoid hitting the rate limit and compromising server performance. Please ask for assistance in the Technical forum if you are unsure how to do this.
+<p style="font-size:small">Error: 429 Too Many Requests
 <p><a href="/pages/api.html">The NationStates API Documentation</a>
-""".format( time.asctime(time.gmtime(violation[0]+(15*60.0))) )
+""".format(ip, minutes+1)
             return inner(*args, **kwargs)
     else:
         def __outer(*args, **kwargs):
