@@ -152,7 +152,7 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
     root = ET.Element("WORLD")
     if "happenings" in q:
         if "limit" in params:
-            limit = int(params["limit"])
+            limit = min((int(params["limit"]),100))
         else:
             limit = 100
         if "sinceid" in params:
@@ -163,16 +163,14 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
             beforeid = int(params["beforeid"])
         else:
             beforeid = None
-        if not (beforeid or sinceid):
-            ts = time.time()
-            sinceid = find_first_event(em,events,ts-event_time_shift)
-        if not sinceid:
-            sinceid = beforeid - limit
         if not beforeid:
-            beforeid = sinceid + limit
+            ts = time.time()
+            beforeid = find_first_event(em,events,ts-event_time_shift)
+        if not sinceid or sinceid < beforeid - limit:
+            sinceid = beforeid - limit
         hroot = ET.Element("HAPPENINGS")
         root.append(hroot)
-        for eid in xrange(sinceid,beforeid):
+        for eid in xrange(beforeid,sinceid,-1):
             if eid in events:
                 e = extract(em,events,eid)
                 etsx = e.find("TIMESTAMP")
