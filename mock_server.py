@@ -37,7 +37,12 @@ def memmap(fname):
 
 def extract(mm,idx,k):
     i,j = idx[k]
-    return unicode(mm[i:j],'windows-1252').encode('utf-8')
+    estr = unicode(mm[i:j],'windows-1252').encode('utf-8')
+    try:
+        return ET.fromstring(estr)
+    except PE:
+        print estr
+        raise
 
 nm = memmap('data/nations.xml')
 rm = memmap('data/regions.xml')
@@ -83,12 +88,7 @@ event_scan(em, events)
 
 def event_time_adjust(mm,idx,ts):
     eid = min(idx.keys())
-    estr = extract(mm,idx,eid)
-    try:
-        exml = ET.fromstring(estr)
-    except PE:
-        print estr
-        raise
+    exml = extract(mm,idx,eid)
     ets = int(exml.find('TIMESTAMP').text)
     return int(ts-ets)
 
@@ -97,7 +97,7 @@ event_time_shift = event_time_adjust(em,events,time.time())
 def find_first_event(mm,idx,ts):
     i = min(idx.keys())
     j = max(idx.keys())
-    ei,ej = ET.fromstring(extract(mm,idx,i)), ET.fromstring(extract(mm,idx,j))
+    ei,ej = extract(mm,idx,i), extract(mm,idx,j)
     def _find_first_event(mm,idx,ts,i,ei,j,ej):
         if( i == j ):
             return i
@@ -110,12 +110,7 @@ def find_first_event(mm,idx,ts):
                 k -= 1
         if( i == k ):
             return j
-        estr = extract(mm,idx,k)
-        try:
-            ek = ET.fromstring(estr)
-        except PE:
-            print estr
-            raise
+        ek = extract(mm,idx,k)
         tk = int(ek.find("TIMESTAMP").text)
         if( tk >= ts ):
             return _find_first_event(mm,idx,ts,i,ei,k,ek)
@@ -176,12 +171,7 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
         root.append(hroot)
         for eid in xrange(sinceid,beforeid):
             if eid in events:
-                estr = extract(em,events,eid)
-                try:
-                    e = ET.fromstring(estr)
-                except PE:
-                    print estr
-                    raise
+                e = extract(em,events,eid)
                 etsx = e.find("TIMESTAMP")
                 ets = int(etsx.text)
                 etsx.text = str(ets+event_time_shift)
