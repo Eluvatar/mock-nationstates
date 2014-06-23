@@ -41,7 +41,10 @@ def extract(mm,idx,k):
     try:
         return ET.fromstring(estr)
     except PE:
+        print "ParseError -- could not parse:"
+        print "---begin---"
         print estr
+        print "--end---"
         raise
 
 nm = memmap('data/nations.xml')
