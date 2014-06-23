@@ -35,6 +35,10 @@ def memmap(fname):
         mm = mmap.mmap(f.fileno(), 0)
     return mm
 
+def extract(mm,idx,k):
+    i,j = idx[k]
+    return unicode(mm[i:j],'windows-1252').encode('utf-8')
+
 nm = memmap('data/nations.xml')
 rm = memmap('data/regions.xml')
 em = memmap('data/happenings.xml')
@@ -79,11 +83,11 @@ event_scan(em, events)
 
 def event_time_adjust(mm,idx,ts):
     eid = min(idx.keys())
-    i,j = idx[eid]
+    estr = extract(mm,idx,eid)
     try:
-        exml = ET.fromstring(mm[i:j])
+        exml = ET.fromstring(estr)
     except PE:
-        print mm[i:j]
+        print estr
         raise
     ets = int(exml.find('TIMESTAMP').text)
     return int(ts-ets)
@@ -93,9 +97,7 @@ event_time_shift = event_time_adjust(em,events,time.time())
 def find_first_event(mm,idx,ts):
     i = min(idx.keys())
     j = max(idx.keys())
-    ii,ij = idx[i]
-    ji,jj = idx[j]
-    ei,ej = ET.fromstring(mm[ii:ij]), ET.fromstring(mm[ji:jj])
+    ei,ej = ET.fromstring(extract(mm,idx,i)), ET.fromstring(extract(mm,idx,j))
     def _find_first_event(mm,idx,ts,i,ei,j,ej):
         if( i == j ):
             return i
@@ -108,8 +110,12 @@ def find_first_event(mm,idx,ts):
                 k -= 1
         if( i == k ):
             return j
-        ki,kj = idx[k]
-        ek = ET.fromstring(mm[ki:kj])
+        estr = extract(mm,idx,k)
+        try:
+            ek = ET.fromstring(estr)
+        except PE:
+            print estr
+            raise
         tk = int(ek.find("TIMESTAMP").text)
         if( tk >= ts ):
             return _find_first_event(mm,idx,ts,i,ei,k,ek)
@@ -170,13 +176,17 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
         root.append(hroot)
         for eid in xrange(sinceid,beforeid):
             if eid in events:
-                i,j = events[eid]
-                e = ET.fromstring(em[i:j])
+                estr = extract(em,events,eid)
+                try:
+                    e = ET.fromstring(estr)
+                except PE:
+                    print estr
+                    raise
                 etsx = e.find("TIMESTAMP")
                 ets = int(etsx.text)
                 etsx.text = str(ets+event_time_shift)
                 hroot.append(e)
-    return ET.tostring(root)
+    return ET.tostring(root,'windows-1252')
 
 def ratelimit(inner):
     if ratelimit:
