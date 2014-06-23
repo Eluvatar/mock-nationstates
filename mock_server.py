@@ -122,7 +122,7 @@ PORT = 6260
 
 def api_result(key,val,idx,mm,q):
     name = id_str(val)
-    if name in nations:
+    if name in idx:
         cherrypy.response.headers['Content-Type']='application/xml'
         i,j = idx[name]
         if( q == None ):
