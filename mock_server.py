@@ -89,13 +89,35 @@ def event_scan(mm,idx):
 events = dict()
 event_scan(em, events)
 
-def event_time_adjust(mm,idx,ts):
-    eid = min(idx.keys())
+def event_time(mm,idx,eid):
     exml = extract(mm,idx,eid)
-    ets = int(exml.find('TIMESTAMP').text)
-    return int(ts-ets)
+    return int(exml.find('TIMESTAMP').text)
 
-event_time_shift = event_time_adjust(em,events,time.time())
+def event_time_zero(mm,idx):
+    eid = min(idx.keys())
+    return event_time(mm,idx,eid)
+
+def event_loop_time(mm,idx):
+    minid = min(idx.keys())
+    maxid = max(idx.keys())
+    mints = event_time(mm,idx,minid)
+    maxts = event_time(mm,idx,maxid)
+    return maxts - mints
+
+base_time = time.time()
+event_time_loop_base = event_time_zero(em,events)
+event_time_loop_step = event_loop_time(em,events)
+
+def event_timescale(ts):
+    elapsed = ts - base_time
+    looped = elapsed % event_time_loop_step
+    return event_time_loop_base + looped
+
+def outside_timescale(ts):
+    elapsed = ts - event_time_loop_base
+    now = time.time()
+    looped = (now - base_time)%event_time_loop_step
+    return int(now - looped + elapsed)
 
 def find_first_event(mm,idx,ts):
     i = min(idx.keys())
@@ -165,7 +187,7 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
             beforeid = None
         if not beforeid:
             ts = time.time()
-            beforeid = find_first_event(em,events,ts-event_time_shift)
+            beforeid = find_first_event(em,events,event_timescale(ts))
         if not sinceid or sinceid < beforeid - limit:
             sinceid = beforeid - limit
         hroot = ET.Element("HAPPENINGS")
@@ -175,8 +197,9 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
                 e = extract(em,events,eid)
                 etsx = e.find("TIMESTAMP")
                 ets = int(etsx.text)
-                etsx.text = str(ets+event_time_shift)
+                etsx.text = str(outside_timescale(ets))
                 hroot.append(e)
+    #TODO remove <?xml version='1.0' encoding='windows-1252'?> line
     return ET.tostring(root,'windows-1252')
 
 def ratelimit(inner):
