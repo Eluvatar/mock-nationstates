@@ -19,13 +19,20 @@ import json, mmap, cherrypy
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError as PE
 import time, sys
-from collections import deque
+from collections import deque, defaultdict
 from ns import id_str
 
 HTML = 'text/html; charset=ISO-8859-1'
 XML = 'application/xml; charset=ISO-8859-1'
 TEXT = 'text/plain; charset=ISO-8859-1'
 
+BAD_REQUEST = """
+<!DOCTYPE html>
+<h1 style="color:red">Bad Request</h1>
+<p>Sorry, I don't know what you're asking for.
+<p style="font-size:small">Error: 400 Bad Request
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
 if "--ratelimit" in sys.argv:
     ratelimit = True
 else:
@@ -209,25 +216,95 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
     return ET.tostring(root,'windows-1252')
 
 def action_api_result(params):
-    if params['a'] == 'sendTG':
-        if params['client'] in telegrams:
-            client_tgs = telegrams[params['client']]
-            if params['tgid'] in client_tgs:
-                if params['key'] == client_tgs[params['tgid']]['key']:
-                    cherrypy.response.headers['Content-Type']=TEXT
-                    return "queued"
-    return """
+    missing_field = """
 <!DOCTYPE html>
-<h1 style="color:red">Bad Request</h1>
-<p>Sorry, I don't know what you're asking for.
+<h1 style="color:red">Missing field: {0}</h1>
 <p style="font-size:small">Error: 400 Bad Request
 <p><a href="/pages/api.html">The NationStates API Documentation</a>
 """
+    incorrect_secret_key = """
+<!DOCTYPE html>
+<h1 style="color:red">Incorrect Secret Ke0y</h1>
+<p style="font-size:small">Error: 403 Incorrect Secret Key
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
+    client_not_registered = """
+<!DOCTYPE html>
+<h1 style="color:red">Client Not Registered For API</h1>
+<p style="font-size:small">Error: 403 Client Not Registered For API
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
+    client_tg_ratelimit_exceeded = """
+<!DOCTYPE html>
+<h1 style="color:red">API  TG ratelimit exceeded by client "{0}".</h1>
+<p style="font-size:small">Error: 429 API  TG ratelimit exceeded by client "{0}".
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
+    client_recruitment_tg_ratelimit_exceeded = """
+<!DOCTYPE html>
+<h1 style="color:red">API Recruitment TG ratelimit exceeded by client "{0}".</h1>
+<p style="font-size:small">Error: 429 API Recruitment TG ratelimit exceeded by client "{0}".
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
+    no_such_api_tg = """
+<!DOCTYPE html>
+<h1 style="color:red">No Such API Telegram Template</h1>
+<p style="font-size:small">Error: 400 Bad Request
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
+    if params['a'] == 'sendTG':
+        for param in ('key','tgid','client'):
+            if param not in params:
+                cherrypy.response.status = 400
+                return missing_field.format(param)
+        if params['client'] in telegrams['clients']:
+            client = telegrams['clients'][params['client']]
+            tgs = telegrams['telegrams']
+            if 'client' not in params:
+                return missing_field.format('client')
+            if params['tgid'] in tgs:
+                tgid = params['tgid']
+                if params['key'] == tgs[tgid]['key']:
+                    if ratelimit:
+                        last_rcrt = _last_client_recruitment_tg[client]
+                        last = _last_client_tg[client]
+                        ts = time.time()
+                        tg = tgs[tgid]
+                        if 'recruitment' in tg and tg['recruitment']:
+                            if last_rcrt + 180.0 >= ts:
+                                cherrypy.response.status = 429
+                                _msg = client_recruitment_tg_ratelimit_exceeded
+                                return _msg.format(client)
+                            _last_client_recruitment_tg[client] = ts
+                        if last + 30.0 >= ts:
+                            cherrypy.response.status = 429
+                            _msg = client_tg_ratelimit_exceeded
+                            return _msg.format(client)
+                        _last_client_tg[client] = ts
+                    cherrypy.response.headers['Content-Type']=TEXT
+                    return "queued"
+                else:
+                    cherrypy.response.status = 403
+                    return incorrect_secret_key
+            else:
+                cherrypy.response.status = 400
+                return no_such_api_tg
+        else:
+            cherrypy.response.status = 403
+            return client_not_registered
+    return BAD_REQUEST
     
-action_api_result.last_tg = deque()
-action_api_result.violation = [0.0]
+_last_client_tg = defaultdict(float)
+_last_client_recruitment_tg = defaultdict(float)
 
 def ratelimit(inner):
+    too_many_requests = """
+<!DOCTYPE html>
+<h1 style="color:red">Too Many Requests From Your IP Address.</h1>
+<p>Your IP address {0} has sent more than 50 requests in 30 seconds. Access to the API has been blocked for the next {1} minutes. Please do not send bursts of traffic!</p><p>Requests should be spaced out to avoid hitting the rate limit and compromising server performance. Please ask for assistance in the Technical forum if you are unsure how to do this.
+<p style="font-size:small">Error: 429 Too Many Requests
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
     if ratelimit:
         last = deque()
         violation = [0.0]
@@ -244,13 +321,7 @@ def ratelimit(inner):
                     cherrypy.response.status = 429
                     ip = cherrypy.request.remote.ip
                     minutes = int((violation[0]+(15*60.0) - ts)/60)
-                    return """
-<!DOCTYPE html>
-<h1 style="color:red">Too Many Requests From Your IP Address.</h1>
-<p>Your IP address {0} has sent more than 50 requests in 30 seconds. Access to the API has been blocked for the next {1} minutes. Please do not send bursts of traffic!</p><p>Requests should be spaced out to avoid hitting the rate limit and compromising server performance. Please ask for assistance in the Technical forum if you are unsure how to do this.
-<p style="font-size:small">Error: 429 Too Many Requests
-<p><a href="/pages/api.html">The NationStates API Documentation</a>
-""".format(ip, minutes+1)
+                    return too_many_requests.format(ip, minutes+1)
             return inner(*args, **kwargs)
     else:
         def __outer(*args, **kwargs):
@@ -281,13 +352,7 @@ class MockNationStatesApi(object):
             return action_api_result(params)
         else:
             cherrypy.response.status = 400 
-            return """
-<!DOCTYPE html>
-<h1 style="color:red">Bad Request</h1>
-<p>Sorry, I don't know what you're asking for.
-<p style="font-size:small">Error: 400 Bad Request
-<p><a href="/pages/api.html">The NationStates API Documentation</a>
-"""
+            return BAD_REQUEST
 
 if __name__ == "__main__":    
     conf = {'global':{'server.socket_port':PORT}}
