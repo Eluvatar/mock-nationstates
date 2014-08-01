@@ -266,18 +266,20 @@ def action_api_result(params):
                 tgid = params['tgid']
                 if params['key'] == tgs[tgid]['key']:
                     if ratelimit:
-                        last_rcrt = _last_client_recruitment_tg[client]
                         last = _last_client_tg[client]
                         ts = time.time()
                         tg = tgs[tgid]
                         if 'recruitment' in tg and tg['recruitment']:
-                            if last_rcrt + 180.0 >= ts:
+                            if last + 180.0 >= ts:
                                 cherrypy.response.status = 429
+                                rem = int(last + 181.0 - ts)
+                                cherrypy.response.headers['Retry-After'] = rem
                                 _msg = client_recruitment_tg_ratelimit_exceeded
                                 return _msg.format(client)
-                            _last_client_recruitment_tg[client] = ts
-                        if last + 30.0 >= ts:
+                        elif last + 30.0 >= ts:
                             cherrypy.response.status = 429
+                            rem = int(last + 31.0 - ts)
+                            cherrypy.response.headers['Retry-After'] = rem
                             _msg = client_tg_ratelimit_exceeded
                             return _msg.format(client)
                         _last_client_tg[client] = ts
@@ -295,7 +297,6 @@ def action_api_result(params):
     return BAD_REQUEST
     
 _last_client_tg = defaultdict(float)
-_last_client_recruitment_tg = defaultdict(float)
 
 def ratelimit(inner):
     too_many_requests = """
