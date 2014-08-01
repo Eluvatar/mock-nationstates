@@ -24,6 +24,7 @@ from ns import id_str
 
 HTML = 'text/html; charset=ISO-8859-1'
 XML = 'application/xml; charset=ISO-8859-1'
+TEXT = 'text/plain; charset=ISO-8859-1'
 
 if "--ratelimit" in sys.argv:
     ratelimit = True
@@ -31,6 +32,8 @@ else:
     ratelimit = False
 
 shards = json.load(open('data/shards.json','r'))
+
+telegrams = json.load(open('data/telegrams.json','r'))
 
 def memmap(fname):
     mm = None
@@ -205,6 +208,25 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
     #TODO remove <?xml version='1.0' encoding='windows-1252'?> line
     return ET.tostring(root,'windows-1252')
 
+def action_api_result(params):
+    if params['a'] == 'sendTG':
+        if params['client'] in telegrams:
+            client_tgs = telegrams[params['client']]
+            if params['tgid'] in client_tgs:
+                if params['key'] == client_tgs[params['tgid']]['key']:
+                    cherrypy.response.headers['Content-Type']=TEXT
+                    return "queued"
+    return """
+<!DOCTYPE html>
+<h1 style="color:red">Bad Request</h1>
+<p>Sorry, I don't know what you're asking for.
+<p style="font-size:small">Error: 400 Bad Request
+<p><a href="/pages/api.html">The NationStates API Documentation</a>
+"""
+    
+action_api_result.last_tg = deque()
+action_api_result.violation = [0.0]
+
 def ratelimit(inner):
     if ratelimit:
         last = deque()
@@ -255,6 +277,8 @@ class MockNationStatesApi(object):
             return api_result('region',params['region'],regions,rm,q)
         elif q:
             return world_api_result(nm,nations,rm,regions,em,events,q,params)
+        elif 'a' in params:
+            return action_api_result(params)
         else:
             cherrypy.response.status = 400 
             return """

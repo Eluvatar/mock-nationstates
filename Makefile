@@ -1,7 +1,7 @@
-mock_server: data/nations.xml data/regions.xml data/happenings.xml
+mock_server: data/nations.xml data/regions.xml data/happenings.xml data/telegrams.json
 	./mock_server.py
 
-ratelimited: data/nations.xml data/regions.xml data/happenings.xml
+ratelimited: data/nations.xml data/regions.xml data/happenings.xml data/telegrams.json
 	./mock_server.py --ratelimited
 
 data/nations.xml:
@@ -12,3 +12,6 @@ data/regions.xml:
 
 data/happenings.xml:
 	ln -s happenings-20131125:26.xml data/happenings.xml
+
+data/telegrams.json:
+	ln -s telegrams-example.json data/telegrams.json
