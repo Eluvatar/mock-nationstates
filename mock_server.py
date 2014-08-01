@@ -22,6 +22,9 @@ import time, sys
 from collections import deque
 from ns import id_str
 
+HTML = 'text/html; charset=ISO-8859-1'
+XML = 'application/xml; charset=ISO-8859-1'
+
 if "--ratelimit" in sys.argv:
     ratelimit = True
 else:
@@ -148,7 +151,7 @@ PORT = 6260
 def api_result(key,val,idx,mm,q):
     name = id_str(val)
     if name in idx:
-        cherrypy.response.headers['Content-Type']='application/xml'
+        cherrypy.response.headers['Content-Type']=XML
         i,j = idx[name]
         if( q == None ):
             return mm[i:j]
@@ -170,7 +173,7 @@ def api_result(key,val,idx,mm,q):
 
 
 def world_api_result(nm,nations,rm,regions,em,events,q,params):
-    cherrypy.response.headers['Content-Type']='application/xml'
+    cherrypy.response.headers['Content-Type']=XML
     root = ET.Element("WORLD")
     if "happenings" in q:
         if "limit" in params:
@@ -238,6 +241,7 @@ class MockNationStatesApi(object):
     @cherrypy.expose
     @ratelimit
     def default(self, *args, **params):
+        cherrypy.response.headers['Content-Type'] = HTML 
         for pair in args:
             key, val = pair.split("=",1)
             params[key] = val
@@ -252,7 +256,7 @@ class MockNationStatesApi(object):
         elif q:
             return world_api_result(nm,nations,rm,regions,em,events,q,params)
         else:
-            cherrypy.response.status = 400         
+            cherrypy.response.status = 400 
             return """
 <!DOCTYPE html>
 <h1 style="color:red">Bad Request</h1>
