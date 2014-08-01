@@ -22,7 +22,7 @@ import time, sys
 from collections import deque, defaultdict
 from ns import id_str
 
-HTML = 'text/html; charset=ISO-8859-1'
+HTML = 'text/html; charset=utf-8'
 XML = 'application/xml; charset=ISO-8859-1'
 TEXT = 'text/plain; charset=ISO-8859-1'
 
