@@ -265,6 +265,6 @@ class MockNationStatesApi(object):
 <p><a href="/pages/api.html">The NationStates API Documentation</a>
 """
 
-    
-conf = {'global':{'server.socket_port':PORT}}
-cherrypy.quickstart(MockNationStatesApi(),'/cgi-bin/api.cgi',conf)    
+if __name__ == "__main__":    
+    conf = {'global':{'server.socket_port':PORT}}
+    cherrypy.quickstart(MockNationStatesApi(),'/cgi-bin/api.cgi',conf)    
