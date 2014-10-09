@@ -190,11 +190,11 @@ def world_api_result(nm,nations,rm,regions,em,events,q,params):
             limit = min((int(params["limit"]),100))
         else:
             limit = 100
-        if "sinceid" in params:
+        if "sinceid" in params and params["sinceid"] != '':
             sinceid = int(params["sinceid"])
         else:
             sinceid = None
-        if "beforeid" in params:
+        if "beforeid" in params and params["beforeid"] != '':
             beforeid = int(params["beforeid"])
         else:
             beforeid = None
