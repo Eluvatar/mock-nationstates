@@ -18,13 +18,19 @@
 import json, mmap, cherrypy
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ParseError as PE
-import time, sys
+import time, sys, os
 from collections import deque, defaultdict
 from ns import id_str
 
 HTML = 'text/html; charset=utf-8'
-XML = 'application/xml; charset=ISO-8859-1'
+XML  = 'application/xml; charset=ISO-8859-1'
 TEXT = 'text/plain; charset=ISO-8859-1'
+
+NOT_FOUND = """
+<h2>Page Not Found</h2>
+<p>What you seek is not here.<br><br>
+"""
+#Note: in reality the 404 page includes the overall NS template. Not bothering.
 
 BAD_REQUEST = """
 <!DOCTYPE html>
@@ -60,8 +66,11 @@ def extract(mm,idx,k):
         print "--end---"
         raise
 
-nm = memmap('data/nations.xml')
-rm = memmap('data/regions.xml')
+NFILE = 'data/nations.xml'
+RFILE = 'data/regions.xml'
+
+nm = memmap(NFILE)
+rm = memmap(RFILE)
 em = memmap('data/happenings.xml')
 
 def scan(mm,beg,end,idx):
@@ -356,5 +365,23 @@ class MockNationStatesApi(object):
             return BAD_REQUEST
 
 if __name__ == "__main__":    
-    conf = {'global':{'server.socket_port':PORT}}
-    cherrypy.quickstart(MockNationStatesApi(),'/cgi-bin/api.cgi',conf)    
+    conf = {
+        'global': {
+            'server.socket_port':PORT,
+        },
+    }
+    staticconf = { 
+        'global': {
+            'server.socket_port':PORT,
+        },
+        '/pages': {
+            'tools.staticdir.root' : os.path.abspath(os.getcwd()),
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir' : './pages'
+        }
+    }
+    cherrypy.config.update(conf)
+    cherrypy.tree.mount(MockNationStatesApi(),'/cgi-bin/api.cgi',conf)
+    cherrypy.tree.mount(None,'/',staticconf)
+    cherrypy.engine.start()
+    cherrypy.engine.block()
