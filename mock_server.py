@@ -307,7 +307,7 @@ def action_api_result(params):
     
 _last_client_tg = defaultdict(float)
 
-def ratelimit(inner):
+def api_ratelimit(inner):
     too_many_requests = """
 <!DOCTYPE html>
 <h1 style="color:red">Too Many Requests From Your IP Address.</h1>
@@ -318,7 +318,7 @@ def ratelimit(inner):
     if ratelimit:
         last = deque()
         violation = [0.0]
-        def __outer(*args, **kwargs):
+        def _outer(*args, **kwargs):
             ts = time.time()
             last.append(ts)
             if( len(last) > 50 ):
@@ -334,15 +334,15 @@ def ratelimit(inner):
                     return too_many_requests.format(ip, minutes+1)
             return inner(*args, **kwargs)
     else:
-        def __outer(*args, **kwargs):
+        def _outer(*args, **kwargs):
             return inner(*args, **kwargs)
-    return __outer
+    return _outer
 
 class MockNationStatesApi(object):
     exposed = True
     
     @cherrypy.expose
-    @ratelimit
+    @api_ratelimit
     def default(self, *args, **params):
         cherrypy.response.headers['Content-Type'] = HTML 
         for pair in args:
