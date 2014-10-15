@@ -1,1 +1,1 @@
-{"clients":{"beef0123":"@Testregionia@ Testlandia"},"telegrams":{"1":{"key":"deadbeef0123"},"2":{"key":"beeffeed0123","recruitment":true}}}
+{"telegrams": {"1": {"token_key": "x9jU7qmUNwPOI2510MZcEp", "key": "deadbeef0123"}, "2": {"recruitment": true, "key": "beeffeed0123"}}, "clients": {"beef0123": "@Testregionia@ Testlandia"}}
