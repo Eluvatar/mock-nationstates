@@ -3,6 +3,10 @@ mock-nationstates
 
 Mock NS API for testing or other purposes
 
+###Dependencies
+
+Requires cherrypy version 3. (Has been tested with 3.2.2).
+
 ###To use minimally:
 
 `make`
